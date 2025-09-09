@@ -1,0 +1,37 @@
+--- qsslsocket_openssl_symbols.cpp
++++ qsslsocket_openssl_symbols.cpp
+@@ -208,6 +208,13 @@ DEFINEFUNC(long, SSL_get_verify_result, SSL *a, a, return -1, return)
+ DEFINEFUNC(int, SSL_library_init, void, DUMMYARG, return -1, return)
+ DEFINEFUNC(void, SSL_load_error_strings, void, DUMMYARG, return, DUMMYARG)
+ DEFINEFUNC(SSL *, SSL_new, SSL_CTX *a, a, return 0, return)
++#if OPENSSL_VERSION_NUMBER >= 0x0090806fL && !defined(OPENSSL_NO_TLSEXT)
++#if OPENSSL_VERSION_NUMBER >= 0x10000000L
++DEFINEFUNC4(long, SSL_ctrl, SSL *a, a, int cmd, cmd, long larg, larg, void *parg, parg, return -1, return)
++#else
++DEFINEFUNC4(long, SSL_ctrl, SSL *a, a, int cmd, cmd, long larg, larg, const void *parg, parg, return -1, return)
++#endif
++#endif
+ DEFINEFUNC3(int, SSL_read, SSL *a, a, void *b, b, int c, c, return -1, return)
+ DEFINEFUNC3(void, SSL_set_bio, SSL *a, a, BIO *b, b, BIO *c, c, return, DUMMYARG)
+ DEFINEFUNC(void, SSL_set_accept_state, SSL *a, a, return, DUMMYARG)
+@@ -218,10 +225,14 @@ DEFINEFUNC(const SSL_METHOD *, SSLv2_client_method, DUMMYARG, DUMMYARG, return 0
+ DEFINEFUNC(const SSL_METHOD *, SSLv3_client_method, DUMMYARG, DUMMYARG, return 0, return)
+ DEFINEFUNC(const SSL_METHOD *, SSLv23_client_method, DUMMYARG, DUMMYARG, return 0, return)
+ DEFINEFUNC(const SSL_METHOD *, TLSv1_client_method, DUMMYARG, DUMMYARG, return 0, return)
++DEFINEFUNC(const SSL_METHOD *, TLSv1_2_client_method, DUMMYARG, DUMMYARG, return 0, return)
+ DEFINEFUNC(const SSL_METHOD *, SSLv2_server_method, DUMMYARG, DUMMYARG, return 0, return)
+ DEFINEFUNC(const SSL_METHOD *, SSLv3_server_method, DUMMYARG, DUMMYARG, return 0, return)
+ DEFINEFUNC(const SSL_METHOD *, SSLv23_server_method, DUMMYARG, DUMMYARG, return 0, return)
+ DEFINEFUNC(const SSL_METHOD *, TLSv1_server_method, DUMMYARG, DUMMYARG, return 0, return)
++DEFINEFUNC(const SSL_METHOD *, TLSv1_2_server_method, DUMMYARG, DUMMYARG, return 0, return)
+ #else
+ DEFINEFUNC(SSL_METHOD *, SSLv2_client_method, DUMMYARG, DUMMYARG, return 0, return)
+ DEFINEFUNC(SSL_METHOD *, SSLv3_client_method, DUMMYARG, DUMMYARG, return 0, return)
+@@ -262,6 +273,7 @@ DEFINEFUNC3(DSA *, d2i_DSAPrivateKey, DSA **a, a, unsigned char **b, b, long c,
+ #endif
+ DEFINEFUNC(void, OPENSSL_add_all_algorithms_noconf, void, DUMMYARG, return, DUMMYARG)
+ DEFINEFUNC(void, OPENSSL_add_all_algorithms_conf, void, DUMMYARG, return, DUMMYARG)
++DEFINEFUNC(long, SSLeay, void, DUMMYARG, return 0, return)
+ 
+ #ifdef Q_OS_SYMBIAN
+ #define RESOLVEFUNC(func, ordinal, lib) \

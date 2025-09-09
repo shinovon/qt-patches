@@ -1,0 +1,51 @@
+--- qsslsocket_openssl.cpp
++++ qsslsocket_openssl.cpp
+@@ -255,23 +255,13 @@ bool QSslSocketBackendPrivate::initSslContext()
+ init_context:
+     switch (configuration.protocol) {
+     case QSsl::SslV2:
+-#ifndef OPENSSL_NO_SSL2
+-        ctx = q_SSL_CTX_new(client ? q_SSLv2_client_method() : q_SSLv2_server_method());
+-#else
+-        ctx = 0; // SSL 2 not supported by the system, but chosen deliberately -> error
+-#endif
+-        break;
+     case QSsl::SslV3:
+-        ctx = q_SSL_CTX_new(client ? q_SSLv3_client_method() : q_SSLv3_server_method());
+-        break;
+     case QSsl::SecureProtocols: // SslV2 will be disabled below
+     case QSsl::TlsV1SslV3: // SslV2 will be disabled below
+     case QSsl::AnyProtocol:
+     default:
+-        ctx = q_SSL_CTX_new(client ? q_SSLv23_client_method() : q_SSLv23_server_method());
+-        break;
+     case QSsl::TlsV1:
+-        ctx = q_SSL_CTX_new(client ? q_TLSv1_client_method() : q_TLSv1_server_method());
++        ctx = q_SSL_CTX_new(client ? q_TLSv1_2_client_method() : q_TLSv1_2_server_method());
+         break;
+     }
+     if (!ctx) {
+@@ -1307,10 +1297,13 @@ bool QSslSocketBackendPrivate::startHandshake()
+                 return false;
+         }
+     }
+ 
++    bool doVerifyPeer = false; // TODO
++    /*
+     bool doVerifyPeer = configuration.peerVerifyMode == QSslSocket::VerifyPeer
+                         || (configuration.peerVerifyMode == QSslSocket::AutoVerifyPeer
+                             && mode == QSslSocket::SslClientMode);
++    */
+ 
+     // Check the peer certificate itself. First try the subject's common name
+     // (CN) as a wildcard, then try all alternate subject name DNS entries the
+@@ -1382,7 +1375,8 @@ bool QSslSocketBackendPrivate::startHandshake()
+             // if QSslSocket::ignoreSslErrors(const QList<QSslError> &errors) was not called and
+             // we get an SSL error, emit a signal unless we ignored all errors (by calling
+             // QSslSocket::ignoreSslErrors() )
+-            doEmitSslError = !ignoreAllSslErrors;
++            doEmitSslError = false; // TODO
++            //doEmitSslError = !ignoreAllSslErrors;
+         }
+         // check whether we need to emit an SSL handshake error
+         if (doVerifyPeer && doEmitSslError) {

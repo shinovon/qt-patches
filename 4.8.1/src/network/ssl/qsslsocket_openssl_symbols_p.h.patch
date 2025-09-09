@@ -1,0 +1,15 @@
+--- qsslsocket_openssl_symbols_p.h
++++ qsslsocket_openssl_symbols_p.h
+@@ -330,10 +330,12 @@ const SSL_METHOD *q_SSLv2_client_method();
+ const SSL_METHOD *q_SSLv3_client_method();
+ const SSL_METHOD *q_SSLv23_client_method();
+ const SSL_METHOD *q_TLSv1_client_method();
++const SSL_METHOD *q_TLSv1_2_client_method();
+ const SSL_METHOD *q_SSLv2_server_method();
+ const SSL_METHOD *q_SSLv3_server_method();
+ const SSL_METHOD *q_SSLv23_server_method();
+ const SSL_METHOD *q_TLSv1_server_method();
++const SSL_METHOD *q_TLSv1_2_server_method();
+ #else
+ SSL_METHOD *q_SSLv2_client_method();
+ SSL_METHOD *q_SSLv3_client_method();

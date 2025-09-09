@@ -1,0 +1,92 @@
+--- qsslsocket_openssl.cpp
++++ qsslsocket_openssl.cpp
+@@ -247,17 +247,11 @@ bool QSslSocketBackendPrivate::initSslContext()
+ init_context:
+     switch (configuration.protocol) {
+     case QSsl::SslV2:
+-        ctx = q_SSL_CTX_new(client ? q_SSLv2_client_method() : q_SSLv2_server_method());
+-        break;
+     case QSsl::SslV3:
+-        ctx = q_SSL_CTX_new(client ? q_SSLv3_client_method() : q_SSLv3_server_method());
+-        break;
+     case QSsl::AnyProtocol:
+     default:
+-        ctx = q_SSL_CTX_new(client ? q_SSLv23_client_method() : q_SSLv23_server_method());
+-        break;
+     case QSsl::TlsV1:
+-        ctx = q_SSL_CTX_new(client ? q_TLSv1_client_method() : q_TLSv1_server_method());
++        ctx = q_SSL_CTX_new(client ? q_TLSv1_2_client_method() : q_TLSv1_2_server_method());
+         break;
+     }
+     if (!ctx) {
+@@ -377,6 +371,26 @@ init_context:
+         emit q->error(QAbstractSocket::UnknownSocketError);
+         return false;
+     }
++    
++#if OPENSSL_VERSION_NUMBER >= 0x0090806fL && !defined(OPENSSL_NO_TLSEXT)
++    if (client && q_SSLeay() >= 0x00090806fL) {
++        // Set server hostname on TLS extension. RFC4366 section 3.1 requires it in ACE format.
++        QString tlsHostName = verificationPeerName.isEmpty() ? q->peerName() : verificationPeerName;
++        if (tlsHostName.isEmpty())
++            tlsHostName = hostName;
++        QByteArray ace = QUrl::toAce(tlsHostName);
++        // only send the SNI header if the URL is valid and not an IP
++        if (!ace.isEmpty()
++            && !QHostAddress().setAddress(tlsHostName)) {
++#if OPENSSL_VERSION_NUMBER >= 0x10000000L
++            if (!q_SSL_ctrl(ssl, SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, ace.data()))
++#else
++            if (!q_SSL_ctrl(ssl, SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, ace.constData()))
++#endif
++                qWarning("could not set SSL_CTRL_SET_TLSEXT_HOSTNAME, Server Name Indication disabled");
++        }
++    }
++#endif
+ 
+     // Clear the session.
+     q_SSL_clear(ssl);
+@@ -1183,6 +1197,7 @@ bool QSslSocketBackendPrivate::startHandshake()
+     X509 *x509 = q_SSL_get_peer_certificate(ssl);
+     configuration.peerCertificate = QSslCertificatePrivate::QSslCertificate_from_X509(x509);
+     q_X509_free(x509);
++/*
+     if (QSslCertificatePrivate::isBlacklisted(configuration.peerCertificate)) {
+         q->setErrorString(QSslSocket::tr("The peer certificate is blacklisted"));
+         q->setSocketError(QAbstractSocket::SslHandshakeFailedError);
+@@ -1190,12 +1205,16 @@ bool QSslSocketBackendPrivate::startHandshake()
+         plainSocket->disconnectFromHost();
+         return false;
+     }
++*/
+ 
+     // Start translating errors.
+     QList<QSslError> errors;
++    bool doVerifyPeer = false; // TODO
++    /*
+     bool doVerifyPeer = configuration.peerVerifyMode == QSslSocket::VerifyPeer
+                         || (configuration.peerVerifyMode == QSslSocket::AutoVerifyPeer
+                             && mode == QSslSocket::SslClientMode);
++    */
+ 
+     // Check the peer certificate itself. First try the subject's common name
+     // (CN) as a wildcard, then try all alternate subject name DNS entries the
+@@ -1267,7 +1286,8 @@ bool QSslSocketBackendPrivate::startHandshake()
+             // if QSslSocket::ignoreSslErrors(const QList<QSslError> &errors) was not called and
+             // we get an SSL error, emit a signal unless we ignored all errors (by calling
+             // QSslSocket::ignoreSslErrors() )
+-            doEmitSslError = !ignoreAllSslErrors;
++            doEmitSslErrors = false; // TODO
++            //doEmitSslError = !ignoreAllSslErrors;
+         }
+         // check whether we need to emit an SSL handshake error
+         if (doVerifyPeer && doEmitSslError) {
+@@ -1283,7 +1303,7 @@ bool QSslSocketBackendPrivate::startHandshake()
+ 
+     // if we have a max read buffer size, reset the plain socket's to 1k
+     if (readBufferMaxSize)
+-        plainSocket->setReadBufferSize(1024);
++        plainSocket->setReadBufferSize(32768);
+ 
+     connectionEncrypted = true;
+     emit q->encrypted();
